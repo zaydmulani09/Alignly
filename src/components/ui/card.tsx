@@ -5,7 +5,9 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-border-subtle bg-surface shadow-sm shadow-slate-900/[0.03]",
+        // Hairline border, no drop shadow: depth is carried by the border and
+        // background, which keeps dense pages from looking padded and glossy.
+        "rounded-lg border border-border-subtle bg-surface",
         className,
       )}
       {...props}
