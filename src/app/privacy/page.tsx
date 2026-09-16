@@ -1,6 +1,5 @@
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { Card, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -50,24 +49,28 @@ export default function PrivacyPage() {
   return (
     <>
       <SiteHeader />
-      <main id="main" className="flex-1 py-12 sm:py-16">
-        <div className="container-app max-w-3xl space-y-8">
-          <div className="space-y-3">
-            <h1 className="font-display text-4xl font-bold">
-              How your data is handled
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              A resume is a sensitive document. Here is exactly what happens to yours.
-            </p>
-          </div>
+      <main id="main" className="flex-1 py-16 sm:py-20">
+        <div className="container-app max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Privacy
+          </p>
+          <h1 className="mt-6 font-display text-[2.25rem] font-bold leading-[1.1] sm:text-[2.75rem]">
+            How your data is handled
+          </h1>
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
+            A resume is a sensitive document. Here is exactly what happens to yours.
+          </p>
 
-          <div className="space-y-5">
+          <div className="mt-12 divide-y divide-border-subtle border-t border-border-subtle">
             {sections.map((section) => (
-              <Card key={section.heading}>
-                <CardContent className="space-y-3 p-6 pt-6">
-                  <h2 className="font-display text-xl font-semibold">
-                    {section.heading}
-                  </h2>
+              <section
+                key={section.heading}
+                className="grid gap-x-12 gap-y-4 py-9 sm:grid-cols-3"
+              >
+                <h2 className="font-display text-lg font-semibold sm:col-span-1">
+                  {section.heading}
+                </h2>
+                <div className="space-y-4 sm:col-span-2">
                   {section.body.map((paragraph) => (
                     <p
                       key={paragraph.slice(0, 40)}
@@ -76,8 +79,8 @@ export default function PrivacyPage() {
                       {paragraph}
                     </p>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </section>
             ))}
           </div>
         </div>
