@@ -47,3 +47,6 @@ next-env.d.ts
 
 # test output
 coverage
+
+# third-party design skill installed via `npx ui-ux-pro-max-cli init --ai claude` (see docs/design-system.md)
+.claude/
