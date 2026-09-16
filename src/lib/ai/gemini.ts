@@ -1,5 +1,5 @@
 import "server-only";
-import { getApiKey, getBaseUrl, getModel } from "@/lib/ai/config";
+import { getApiKey, getBaseUrl, getModelChain } from "@/lib/ai/config";
 
 export type GeminiPart = { text: string };
 export type GeminiContent = { role: "user" | "model"; parts: GeminiPart[] };
@@ -86,31 +86,28 @@ function mapHttpError(status: number, body: string): GeminiError {
 }
 
 /**
- * Single call into Gemini. Returns the model's text; the caller decides whether
- * that text is JSON. Errors are normalised so route handlers never have to
- * parse Google's error envelope, and the request body is never logged.
+ * One attempt against one model.
  */
-export async function generate({
+async function generateOnce(
+  model: string,
+  key: string,
+  {
   system,
   contents,
   responseSchema,
   temperature = 0.3,
   maxOutputTokens = 8192,
-  timeoutMs = 60_000,
-  signal,
-}: GenerateOptions): Promise<string> {
-  const key = getApiKey();
-  if (!key) {
-    throw new GeminiError("not-configured", FAILURE_MESSAGES["not-configured"]);
-  }
-
+    timeoutMs = 60_000,
+    signal,
+  }: GenerateOptions,
+): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   let response: Response;
   try {
-    response = await fetch(`${getBaseUrl()}/${getModel()}:generateContent`, {
+    response = await fetch(`${getBaseUrl()}/${model}:generateContent`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -174,4 +171,41 @@ export async function generate({
   }
 
   return text;
+}
+
+/**
+ * Single call into Gemini. Returns the model's text; the caller decides whether
+ * that text is JSON. Errors are normalised so route handlers never have to
+ * parse Google's error envelope, and the request body is never logged.
+ *
+ * Free-tier Flash models report 503 "high demand" often enough that a single
+ * attempt would fail a real user's analysis for reasons that have nothing to do
+ * with them, so an unavailable model falls through to the next verified one.
+ * Only availability is retried: a bad key or an exhausted quota will fail the
+ * same way on every model, so those surface immediately.
+ */
+export async function generate(options: GenerateOptions): Promise<string> {
+  const key = getApiKey();
+  if (!key) {
+    throw new GeminiError("not-configured", FAILURE_MESSAGES["not-configured"]);
+  }
+
+  const chain = getModelChain();
+  let lastError: GeminiError = new GeminiError(
+    "unavailable",
+    FAILURE_MESSAGES.unavailable,
+  );
+
+  for (const model of chain) {
+    try {
+      return await generateOnce(model, key, options);
+    } catch (error) {
+      if (!(error instanceof GeminiError) || error.code !== "unavailable") {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
