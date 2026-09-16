@@ -81,6 +81,28 @@ export function Workspace() {
   const jdReady = jobDescription.trim().length >= MIN_JOB_DESCRIPTION_CHARS;
   const canAnalyze = Boolean(resume) && jdReady && aiConfigured !== false;
 
+  function onTabKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const keys = ["ArrowRight", "ArrowLeft", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+
+    const reachable = TABS.filter((entry) => tabAvailable[entry.id]);
+    const current = reachable.findIndex((entry) => entry.id === tab);
+    if (current === -1) return;
+
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? reachable.length - 1
+          : event.key === "ArrowRight"
+            ? (current + 1) % reachable.length
+            : (current - 1 + reachable.length) % reachable.length;
+
+    event.preventDefault();
+    setTab(reachable[next].id);
+    document.getElementById(`tab-${reachable[next].id}`)?.focus();
+  }
+
   const runAnalysis = useCallback(async () => {
     if (!resume || !jdReady) return;
     setRunning(true);
@@ -95,8 +117,7 @@ export function Workspace() {
         }),
       });
       const payload = (await response.json()) as
-        | { analysis: Analysis }
-        | { error: string };
+        { analysis: Analysis } | { error: string };
 
       if (!response.ok || "error" in payload) {
         setError("error" in payload ? payload.error : "The analysis failed.");
@@ -105,7 +126,9 @@ export function Workspace() {
       setAnalysis(payload.analysis);
       setTab("results");
     } catch {
-      setError("Could not reach the server. Check your connection and try again.");
+      setError(
+        "Could not reach the server. Check your connection and try again.",
+      );
     } finally {
       setRunning(false);
     }
@@ -155,23 +178,32 @@ export function Workspace() {
       {aiConfigured === false ? (
         <Alert tone="caution" title="AI analysis is not configured">
           <p>
-            This deployment has no <code>GEMINI_API_KEY</code>, so analysis and the
-            assistant are unavailable. Uploading a resume and extracting its text still
-            work. See the README for the two-minute setup.
+            This deployment has no <code>GEMINI_API_KEY</code>, so analysis and
+            the assistant are unavailable. Uploading a resume and extracting its
+            text still work. See the README for the two-minute setup.
           </p>
         </Alert>
       ) : null}
 
-      {/* Tabs */}
-      <div role="tablist" aria-label="Workspace sections" className="flex gap-1 overflow-x-auto border-b border-border-subtle">
+      {/* Tabs. Roving tabindex plus arrow keys, per the WAI-ARIA tabs pattern:
+          Tab moves into and out of the strip, arrows move between tabs. */}
+      <div
+        role="tablist"
+        aria-label="Workspace sections"
+        className="flex gap-1 overflow-x-auto border-b border-border-subtle"
+        onKeyDown={onTabKeyDown}
+      >
         {TABS.map(({ id, label, Icon }) => {
           const available = tabAvailable[id];
           return (
             <button
               key={id}
+              id={`tab-${id}`}
               role="tab"
               type="button"
               aria-selected={tab === id}
+              aria-controls={`panel-${id}`}
+              tabIndex={tab === id ? 0 : -1}
               disabled={!available}
               onClick={() => setTab(id)}
               className={cn(
@@ -179,7 +211,8 @@ export function Workspace() {
                 tab === id
                   ? "border-secondary text-secondary"
                   : "border-transparent text-muted-foreground hover:text-foreground",
-                !available && "cursor-not-allowed opacity-40 hover:text-muted-foreground",
+                !available &&
+                  "cursor-not-allowed opacity-40 hover:text-muted-foreground",
               )}
             >
               <Icon className="size-4" aria-hidden />
@@ -189,128 +222,175 @@ export function Workspace() {
         })}
       </div>
 
-      {tab === "setup" ? (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <span className="mr-2 text-muted-foreground">1.</span>Your resume
-              </CardTitle>
-              <CardDescription>
-                PDF or DOCX. The text is extracted on our server and returned to this
-                page; the file is not stored.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResumeUpload />
-            </CardContent>
-          </Card>
+      <div
+        role="tabpanel"
+        id="panel-setup"
+        aria-labelledby="tab-setup"
+        hidden={tab !== "setup"}
+      >
+        {tab === "setup" ? (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <span className="mr-2 text-muted-foreground">1.</span>Your
+                  resume
+                </CardTitle>
+                <CardDescription>
+                  PDF or DOCX. The text is extracted on our server and returned
+                  to this page; the file is not stored.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResumeUpload />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <span className="mr-2 text-muted-foreground">2.</span>The job
-              </CardTitle>
-              <CardDescription>
-                Paste the posting you are applying for.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <JobDescriptionInput />
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <span className="mr-2 text-muted-foreground">2.</span>The job
+                </CardTitle>
+                <CardDescription>
+                  Paste the posting you are applying for.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <JobDescriptionInput />
+              </CardContent>
+            </Card>
 
-          <Card className="border-secondary/30 bg-secondary/[0.03]">
-            <CardContent className="space-y-4 p-6 pt-6">
-              <div className="space-y-1">
-                <h2 className="font-display text-lg font-semibold">
-                  <span className="mr-2 text-muted-foreground">3.</span>Run the analysis
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Pressing this sends your resume text and the job description to
-                  Google&apos;s Gemini API. Nothing leaves this page before you do.
-                </p>
-              </div>
-
-              {error ? (
-                <Alert tone="negative" title="The analysis did not run">
-                  {error}
-                </Alert>
-              ) : null}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Button size="lg" onClick={runAnalysis} disabled={!canAnalyze || running}>
-                  {running ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" aria-hidden />
-                      Analyzing…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="size-4" aria-hidden />
-                      {analysis ? "Run it again" : "Analyze my resume"}
-                    </>
-                  )}
-                </Button>
-                {analysis && !running ? (
-                  <Button variant="outline" size="lg" onClick={() => setTab("results")}>
-                    View current results
-                    <ArrowRight className="size-4" aria-hidden />
-                  </Button>
-                ) : null}
-              </div>
-
-              {!canAnalyze && aiConfigured !== false ? (
-                <p className="text-sm text-muted-foreground">
-                  {!resume
-                    ? "Add a resume to continue."
-                    : `The job description needs at least ${MIN_JOB_DESCRIPTION_CHARS} characters.`}
-                </p>
-              ) : null}
-
-              {running ? (
-                <div className="space-y-2" aria-live="polite">
+            <Card className="border-secondary/30 bg-secondary/[0.03]">
+              <CardContent className="space-y-4 p-6 pt-6">
+                <div className="space-y-1">
+                  <h2 className="font-display text-lg font-semibold">
+                    <span className="mr-2 text-muted-foreground">3.</span>Run
+                    the analysis
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    Reading both documents and scoring the overlap. This usually takes
-                    15–30 seconds.
+                    Pressing this sends your resume text and the job description
+                    to Google&apos;s Gemini API. Nothing leaves this page before
+                    you do.
                   </p>
-                  <Skeleton className="h-2 w-full" />
                 </div>
-              ) : null}
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
 
-      {tab === "results" && analysis ? (
-        <div className="space-y-4">
-          {stale ? (
-            <Alert tone="caution" title="The job description has changed">
-              <p>
-                These results were produced from the previous posting. Run the analysis
-                again to update them.
-              </p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={runAnalysis} disabled={running}>
+                {error ? (
+                  <Alert tone="negative" title="The analysis did not run">
+                    {error}
+                  </Alert>
+                ) : null}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    size="lg"
+                    onClick={runAnalysis}
+                    disabled={!canAnalyze || running}
+                  >
+                    {running ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" aria-hidden />
+                        Analyzing…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-4" aria-hidden />
+                        {analysis ? "Run it again" : "Analyze my resume"}
+                      </>
+                    )}
+                  </Button>
+                  {analysis && !running ? (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setTab("results")}
+                    >
+                      View current results
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Button>
+                  ) : null}
+                </div>
+
+                {!canAnalyze && aiConfigured !== false ? (
+                  <p className="text-sm text-muted-foreground">
+                    {!resume
+                      ? "Add a resume to continue."
+                      : `The job description needs at least ${MIN_JOB_DESCRIPTION_CHARS} characters.`}
+                  </p>
+                ) : null}
+
                 {running ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : (
-                  <Sparkles className="size-4" aria-hidden />
-                )}
-                Re-run the analysis
-              </Button>
-            </Alert>
-          ) : null}
-          <ResultsDashboard
-            analysis={analysis}
-            generatedAt={analyzedAt}
-            onAnalyzeAnother={() => setTab("setup")}
-          />
-        </div>
-      ) : null}
+                  <div className="space-y-2" aria-live="polite">
+                    <p className="text-sm text-muted-foreground">
+                      Reading both documents and scoring the overlap. This
+                      usually takes 15–30 seconds.
+                    </p>
+                    <Skeleton className="h-2 w-full" />
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+      </div>
 
-      {tab === "assistant" && resume ? <AssistantPanel /> : null}
+      <div
+        role="tabpanel"
+        id="panel-results"
+        aria-labelledby="tab-results"
+        hidden={tab !== "results"}
+      >
+        {tab === "results" && analysis ? (
+          <div className="space-y-4">
+            {stale ? (
+              <Alert tone="caution" title="The job description has changed">
+                <p>
+                  These results were produced from the previous posting. Run the
+                  analysis again to update them.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={runAnalysis}
+                  disabled={running}
+                >
+                  {running ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Sparkles className="size-4" aria-hidden />
+                  )}
+                  Re-run the analysis
+                </Button>
+              </Alert>
+            ) : null}
+            <ResultsDashboard
+              analysis={analysis}
+              generatedAt={analyzedAt}
+              onAnalyzeAnother={() => setTab("setup")}
+            />
+          </div>
+        ) : null}
+      </div>
 
-      {tab === "draft" && analysis ? <DraftWorkshop analysis={analysis} /> : null}
+      <div
+        role="tabpanel"
+        id="panel-assistant"
+        aria-labelledby="tab-assistant"
+        hidden={tab !== "assistant"}
+      >
+        {tab === "assistant" && resume ? <AssistantPanel /> : null}
+      </div>
+
+      <div
+        role="tabpanel"
+        id="panel-draft"
+        aria-labelledby="tab-draft"
+        hidden={tab !== "draft"}
+      >
+        {tab === "draft" && analysis ? (
+          <DraftWorkshop analysis={analysis} />
+        ) : null}
+      </div>
     </div>
   );
 }
