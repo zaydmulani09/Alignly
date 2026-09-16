@@ -44,6 +44,8 @@ to a lighter model with `GEMINI_MODEL`.
 | `GEMINI_API_KEY` | For AI features | — | Server-side key for the Gemini API. Never exposed to the browser. |
 | `GEMINI_MODEL` | No | `gemini-3.8-flash` | Overrides the model. Free-tier options that support structured output: `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`. |
 | `AI_RATE_LIMIT_PER_MINUTE` | No | `10` | Requests per IP per minute against `/api/analyze` and `/api/chat`. |
+| `GEMINI_BASE_URL` | No | Google's endpoint | Points the client at a stand-in. Used only for local testing (see below). |
+| `NEXT_PUBLIC_SITE_URL` | No | `https://alignly.vercel.app` | Canonical URL for social metadata and the sitemap. |
 
 `.env.example` holds placeholders only. `.env.local` is gitignored; no key should ever
 be committed.
@@ -68,6 +70,7 @@ src/
     layout/                   header, footer, wordmark
     workspace/                upload, job description, tabs, assistant, draft editor
     results/                  score visualisation and the dashboard
+  middleware.ts             per-request CSP nonce
   lib/
     ai/                       Gemini client, prompts, analysis contract
     extract/                  file sniffing and text normalisation
@@ -93,6 +96,23 @@ adapted and why. To restore the skill locally:
 
 ```bash
 npx ui-ux-pro-max-cli init --ai claude
+```
+
+### Testing the AI routes without a key
+
+`scripts/gemini-stub.mjs` stands in for the Gemini API so the analyze and chat
+routes can be driven end to end — including the failure paths, which are otherwise
+hard to reach on purpose.
+
+```bash
+node scripts/gemini-stub.mjs ok        # or: quota | badkey | garbage
+```
+
+Then run the app with:
+
+```
+GEMINI_API_KEY=stub
+GEMINI_BASE_URL=http://localhost:4010/models
 ```
 
 ---
@@ -142,3 +162,9 @@ shows that AI analysis is unconfigured.
   policy, not this app's behaviour, and it is stated on the privacy page.
 - **The score is an estimate.** It reflects how well the resume evidences the posting, as
   judged by one model. It is not a hiring probability.
+- **Pages render dynamically.** The CSP issues a nonce per request, which means pages are
+  server-rendered rather than statically cached. That is the cost of a strict script policy
+  on this framework, and it was chosen deliberately over `'unsafe-inline'`.
+- **The live Google endpoint has not been exercised here.** The routes were verified end to
+  end against the local stub, including quota, bad-key and malformed-reply handling. Add a
+  real key and run one analysis to confirm the production path.
