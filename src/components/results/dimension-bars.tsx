@@ -1,6 +1,9 @@
 "use client";
 
-import type { Dimension } from "@/lib/ai/analysis-schema";
+interface Dimension {
+  name: string;
+  score: number;
+}
 
 interface DimensionBarsProps {
   dimensions: Dimension[];

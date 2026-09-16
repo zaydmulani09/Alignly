@@ -1,16 +1,21 @@
 "use client";
 
-import type { ActionPlanItem } from "@/lib/ai/analysis-schema";
+interface ActionPlanItem {
+  area: string;
+  title: string;
+  detail: string;
+  priority: "high" | "medium" | "low";
+}
 
 interface RecommendedActionsProps {
   items: ActionPlanItem[];
 }
 
 export function RecommendedActions({ items }: RecommendedActionsProps) {
-  const effortColor = {
-    quick: "bg-positive/10 text-positive-foreground",
-    moderate: "bg-caution/10 text-caution-foreground",
-    substantial: "bg-negative/10 text-negative-foreground",
+  const priorityColor = {
+    high: "bg-negative/10 text-negative-foreground",
+    medium: "bg-caution/10 text-caution-foreground",
+    low: "bg-positive/10 text-positive-foreground",
   };
 
   return (
@@ -22,9 +27,10 @@ export function RecommendedActions({ items }: RecommendedActionsProps) {
               {i + 1}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="font-medium">{item.step}</p>
-              <span className={`mt-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${effortColor[item.effort]}`}>
-                {item.effort}
+              <p className="font-medium">{item.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+              <span className={`mt-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${priorityColor[item.priority]}`}>
+                {item.priority} priority
               </span>
             </div>
           </div>
