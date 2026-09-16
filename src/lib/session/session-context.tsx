@@ -96,7 +96,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const skipWrite = useRef(true);
 
   useEffect(() => {
+    // sessionStorage is an external system and cannot be read during render
+    // without breaking hydration, so this one synchronous setState is the
+    // point of the effect rather than a cascade.
     const stored = readStored();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setState(stored);
     setHydrated(true);
   }, []);

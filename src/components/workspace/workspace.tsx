@@ -52,7 +52,9 @@ export function Workspace() {
     clearEverything,
   } = session;
 
-  const [tab, setTab] = useState<Tab>("setup");
+  // null means "not chosen yet", which lets the landing tab be derived from
+  // the restored session instead of corrected by an effect after mount.
+  const [chosenTab, setTab] = useState<Tab | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
@@ -73,9 +75,7 @@ export function Workspace() {
   }, []);
 
   // Land on the results if a previous analysis survived a refresh.
-  useEffect(() => {
-    if (hydrated && analysis) setTab("results");
-  }, [hydrated, analysis]);
+  const tab: Tab = chosenTab ?? (hydrated && analysis ? "results" : "setup");
 
   const stale = isAnalysisStale(session);
   const jdReady = jobDescription.trim().length >= MIN_JOB_DESCRIPTION_CHARS;
