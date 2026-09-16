@@ -16,15 +16,32 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://alignly.vercel.app";
+
+const description =
+  "Upload a resume, paste a job description, and get an AI-generated read on where they line up, where they don't, and what to rewrite — grounded only in experience you actually have.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Alignly — see how your resume reads against a job",
     template: "%s · Alignly",
   },
-  description:
-    "Upload a resume, paste a job description, and get an AI-generated read on where they line up, where they don't, and what to rewrite — grounded only in experience you actually have.",
+  description,
   applicationName: "Alignly",
   robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    siteName: "Alignly",
+    title: "Alignly — see how your resume reads against a job",
+    description,
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary",
+    title: "Alignly — see how your resume reads against a job",
+    description,
+  },
 };
 
 export const viewport: Viewport = {
