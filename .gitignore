@@ -50,3 +50,7 @@ coverage
 
 # third-party design skill installed via `npx ui-ux-pro-max-cli init --ai claude` (see docs/design-system.md)
 .claude/
+
+# local fixtures and scratch files
+*.tmp.*
+fixture.*
