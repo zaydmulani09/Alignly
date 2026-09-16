@@ -136,6 +136,24 @@ export function ResumeUpload() {
             </Button>
           </div>
         </div>
+        {/* Extraction is lossy, and a mangled text layer produces a confusing
+            analysis with no obvious cause. Showing exactly what was read lets
+            someone catch that before spending a request on it. */}
+        <details className="rounded-md border border-border-subtle">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            Check what was extracted
+          </summary>
+          <div className="space-y-2 border-t border-border-subtle p-4">
+            <p className="text-xs text-muted-foreground">
+              This is the text the model will read. If it looks scrambled or is
+              missing sections, export your resume again and re-upload.
+            </p>
+            <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-sm bg-surface-sunken p-3 font-sans text-xs leading-relaxed">
+              {resume.text}
+            </pre>
+          </div>
+        </details>
+
         <input
           ref={inputRef}
           type="file"
