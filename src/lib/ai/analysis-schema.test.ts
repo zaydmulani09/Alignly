@@ -54,7 +54,8 @@ describe("analysisSchema", () => {
   });
 
   it("requires every top-level section, even when empty", () => {
-    const { actionPlan: _omitted, ...withoutPlan } = valid;
+    const withoutPlan: Record<string, unknown> = { ...valid };
+    delete withoutPlan.actionPlan;
     expect(() => analysisSchema.parse(withoutPlan)).toThrow();
   });
 

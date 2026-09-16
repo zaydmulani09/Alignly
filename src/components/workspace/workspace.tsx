@@ -260,7 +260,7 @@ export function Workspace() {
               </CardContent>
             </Card>
 
-            <Card className="border-secondary/30 bg-secondary/[0.03]">
+            <Card>
               <CardContent className="space-y-4 p-6 pt-6">
                 <div className="space-y-1">
                   <h2 className="font-display text-lg font-semibold">

@@ -74,7 +74,7 @@ export function ResultsDashboard({
             <p className="text-sm leading-relaxed text-muted-foreground">
               {analysis.scoreRationale}
             </p>
-            <div className="flex items-start gap-2 rounded-lg bg-surface-sunken p-3 text-xs leading-relaxed text-muted-foreground">
+            <div className="flex items-start gap-2 border-l-2 border-border pl-3 text-xs leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               <p>
                 This score is one model&apos;s estimate of how well your resume
@@ -245,7 +245,7 @@ export function ResultsDashboard({
 
       {/* Action plan */}
       {analysis.actionPlan.length ? (
-        <Card className="border-secondary/30">
+        <Card>
           <CardHeader>
             <CardTitle>Do these first</CardTitle>
             <CardDescription>
@@ -253,14 +253,14 @@ export function ResultsDashboard({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ol className="space-y-3">
+            <ol>
               {analysis.actionPlan.map((item, index) => (
                 <li
                   key={item.step}
-                  className="flex gap-3 rounded-lg bg-surface-sunken p-4"
+                  className="flex gap-4 border-t border-border-subtle py-4 first:border-t-0 first:pt-0"
                 >
-                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-sm font-semibold text-on-secondary">
-                    {index + 1}
+                  <span className="font-display text-sm font-semibold tabular-nums text-muted-foreground">
+                    {String(index + 1).padStart(2, "0")}
                   </span>
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="font-medium">{item.step}</p>
