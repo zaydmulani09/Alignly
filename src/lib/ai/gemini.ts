@@ -1,7 +1,5 @@
 import "server-only";
-import { getApiKey, getModel } from "@/lib/ai/config";
-
-const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+import { getApiKey, getBaseUrl, getModel } from "@/lib/ai/config";
 
 export type GeminiPart = { text: string };
 export type GeminiContent = { role: "user" | "model"; parts: GeminiPart[] };
@@ -112,7 +110,7 @@ export async function generate({
 
   let response: Response;
   try {
-    response = await fetch(`${ENDPOINT}/${getModel()}:generateContent`, {
+    response = await fetch(`${getBaseUrl()}/${getModel()}:generateContent`, {
       method: "POST",
       headers: {
         "content-type": "application/json",

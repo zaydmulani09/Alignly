@@ -29,6 +29,18 @@ export function isAiConfigured(): boolean {
   return getApiKey() !== null;
 }
 
+/**
+ * Overrides the Gemini endpoint. Exists so the analyze and chat routes can be
+ * exercised end to end against a local stub without a real key or quota; in
+ * production it is unset and the Google endpoint is used.
+ */
+export function getBaseUrl(): string {
+  return (
+    process.env.GEMINI_BASE_URL?.trim() ||
+    "https://generativelanguage.googleapis.com/v1beta/models"
+  );
+}
+
 export function getRateLimitPerMinute(): number {
   const raw = Number(process.env.AI_RATE_LIMIT_PER_MINUTE);
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 10;
