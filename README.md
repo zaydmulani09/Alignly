@@ -31,9 +31,14 @@ failing at the point of use.
 2. Put it in `.env.local` as `GEMINI_API_KEY=...`.
 3. Restart `npm run dev`.
 
-Free-tier Flash models are rate-limited per minute and per day. If you hit the ceiling,
-the app says so specifically rather than showing a generic failure, and you can switch
-to a lighter model with `GEMINI_MODEL`.
+Free-tier Flash models are rate-limited per minute and per day, and the newest ones
+return 503 "high demand" fairly often. If a model is unavailable the app falls through to
+the next verified one automatically; if the quota is genuinely exhausted it says so
+specifically rather than showing a generic failure.
+
+`gemini-3.8-flash` and `gemini-3.7-flash` were both overloaded when this was tested, which
+is why the default is `gemini-3.5-flash`. The `gemini-2.5-*` models are advertised by the
+models list but return 404 on `generateContent` with this schema, so they are not offered.
 
 ---
 
@@ -42,7 +47,7 @@ to a lighter model with `GEMINI_MODEL`.
 | Variable | Required | Default | What it does |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | For AI features | — | Server-side key for the Gemini API. Never exposed to the browser. |
-| `GEMINI_MODEL` | No | `gemini-3.8-flash` | Overrides the model. Free-tier options that support structured output: `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`. |
+| `GEMINI_MODEL` | No | `gemini-3.5-flash` | Overrides the model. Verified free-tier options for structured output: `gemini-3.5-flash`, `gemini-3.6-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`. |
 | `AI_RATE_LIMIT_PER_MINUTE` | No | `10` | Requests per IP per minute against `/api/analyze` and `/api/chat`. |
 | `GEMINI_BASE_URL` | No | Google's endpoint | Points the client at a stand-in. Used only for local testing (see below). |
 | `NEXT_PUBLIC_SITE_URL` | No | `https://alignly.vercel.app` | Canonical URL for social metadata and the sitemap. |
@@ -165,6 +170,5 @@ shows that AI analysis is unconfigured.
 - **Pages render dynamically.** The CSP issues a nonce per request, which means pages are
   server-rendered rather than statically cached. That is the cost of a strict script policy
   on this framework, and it was chosen deliberately over `'unsafe-inline'`.
-- **The live Google endpoint has not been exercised here.** The routes were verified end to
-  end against the local stub, including quota, bad-key and malformed-reply handling. Add a
-  real key and run one analysis to confirm the production path.
+- **Analysis takes 25-30 seconds** on `gemini-3.5-flash` for a one-page resume. That is the
+  model, not the app; the UI says so while it waits.
