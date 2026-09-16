@@ -1,36 +1,144 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alignly — resume-to-job matcher
 
-## Getting Started
+Upload a resume, paste a job description, and get a specific read on how the two line
+up: what the resume evidences, what the posting asks for that it doesn't show, which
+bullets to rewrite, and what to prepare for an interview. Everything the model says is
+tied back to text that is actually in the document — it rewrites, it never invents.
 
-First, run the development server:
+- **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Vitest
+- **AI provider:** Google Gemini (free tier), called server-side with structured JSON output
+- **Deploys to:** Vercel, with no database and no authentication
+
+---
+
+## Quick start
 
 ```bash
+npm install
+cp .env.example .env.local   # then paste your key into GEMINI_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app runs **without** an API key: upload, text extraction, the draft editor and both
+exports all work, and the AI features report themselves as unconfigured rather than
+failing at the point of use.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Getting a Gemini key
 
-## Learn More
+1. Go to <https://aistudio.google.com/apikey> and create a key (free, no billing needed).
+2. Put it in `.env.local` as `GEMINI_API_KEY=...`.
+3. Restart `npm run dev`.
 
-To learn more about Next.js, take a look at the following resources:
+Free-tier Flash models are rate-limited per minute and per day. If you hit the ceiling,
+the app says so specifically rather than showing a generic failure, and you can switch
+to a lighter model with `GEMINI_MODEL`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+| Variable | Required | Default | What it does |
+| --- | --- | --- | --- |
+| `GEMINI_API_KEY` | For AI features | — | Server-side key for the Gemini API. Never exposed to the browser. |
+| `GEMINI_MODEL` | No | `gemini-3.8-flash` | Overrides the model. Free-tier options that support structured output: `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`. |
+| `AI_RATE_LIMIT_PER_MINUTE` | No | `10` | Requests per IP per minute against `/api/analyze` and `/api/chat`. |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`.env.example` holds placeholders only. `.env.local` is gitignored; no key should ever
+be committed.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## How it fits together
+
+```
+src/
+  app/
+    page.tsx                  landing page
+    privacy/                  what happens to your data, in plain terms
+    analyze/                  the workspace (session provider + tabs)
+    api/
+      extract/                PDF & DOCX -> text (Node runtime)
+      analyze/                resume + posting -> structured analysis
+      chat/                   assistant turns
+      status/                 "is a key configured?" for honest UI states
+  components/
+    ui/                       Button, Card, Badge, Textarea, Alert, Disclosure…
+    layout/                   header, footer, wordmark
+    workspace/                upload, job description, tabs, assistant, draft editor
+    results/                  score visualisation and the dashboard
+  lib/
+    ai/                       Gemini client, prompts, analysis contract
+    extract/                  file sniffing and text normalisation
+    export/                   draft assembly, DOCX and PDF export
+    session/                  browser-session state
+    rate-limit.ts             per-IP fixed window
+```
+
+### Data flow
+
+1. The file is posted to `/api/extract`, parsed **in memory** with `unpdf` or `mammoth`,
+   and discarded. Only the extracted text comes back.
+2. That text lives in `sessionStorage` — surviving a refresh, gone when the tab closes.
+3. Nothing reaches Google until the user presses **Analyze** or sends a chat message.
+4. `/api/analyze` asks Gemini for structured JSON, then re-validates the reply against
+   the same Zod contract before the UI sees it.
+
+### Design
+
+The visual language came from the **UI/UX Pro Max** skill, installed project-locally.
+See [`docs/design-system.md`](docs/design-system.md) for what it recommended, what was
+adapted and why. To restore the skill locally:
+
+```bash
+npx ui-ux-pro-max-cli init --ai claude
+```
+
+---
+
+## Scripts
+
+```bash
+npm run dev         # development server
+npm run build       # production build
+npm run start       # serve the production build
+npm test            # unit tests (vitest)
+npm run lint        # eslint
+npm run typecheck   # tsc --noEmit
+```
+
+---
+
+## Deploying to Vercel
+
+1. Push this branch and open a PR, or push to your default branch.
+2. In Vercel, **Add New → Project** and import the repository. The framework is detected
+   as Next.js; no build settings need changing.
+3. Under **Settings → Environment Variables**, add `GEMINI_API_KEY` (and optionally
+   `GEMINI_MODEL`, `AI_RATE_LIMIT_PER_MINUTE`) for Production, Preview and Development.
+4. Deploy. The API routes become serverless functions automatically; `/api/analyze` and
+   `/api/chat` declare a 60-second `maxDuration` and `/api/extract` 30 seconds, which
+   fits Vercel's limits on the Hobby plan.
+
+If you deploy without the key, the site still builds and serves — the workspace simply
+shows that AI analysis is unconfigured.
+
+---
+
+## Known limitations
+
+- **Scanned PDFs don't work.** There is no OCR; a PDF with no text layer is rejected with
+  an explanation rather than silently producing nothing.
+- **Formatting is not preserved.** Extraction yields plain text, so exports carry content,
+  not your original layout. The draft is meant to be pasted back into your own template.
+- **Rate limiting is per serverless instance.** Module memory is not shared between Vercel
+  instances, so the limit throttles a runaway client but is not a distributed guarantee.
+  Swapping in Vercel KV or Upstash behind `lib/rate-limit.ts` is the upgrade path.
+- **Bullet matching is line-based.** A bullet that wraps across two lines in the source PDF
+  may not be auto-placed; the draft view lists any such rewrite for manual pasting instead
+  of guessing.
+- **Free-tier prompts may be used by Google** to improve its products. That is Google's
+  policy, not this app's behaviour, and it is stated on the privacy page.
+- **The score is an estimate.** It reflects how well the resume evidences the posting, as
+  judged by one model. It is not a hiring probability.
