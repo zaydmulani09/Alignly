@@ -172,3 +172,19 @@ shows that AI analysis is unconfigured.
   on this framework, and it was chosen deliberately over `'unsafe-inline'`.
 - **Analysis takes 25-30 seconds** on `gemini-3.5-flash` for a one-page resume. That is the
   model, not the app; the UI says so while it waits.
+
+---
+
+## Recent improvements
+
+**v1.1.0 – Better insights and UX**
+- Likelihood gauge showing estimated chance of getting the job
+- Skill gap visualization with coverage percentage
+- Interview prep section with expandable topic cards
+- Keyword density chart showing which job keywords are in your resume
+- Score breakdown showing benchmarks and ideal range
+- Experience alignment checklist with status indicators
+- Analysis history tracking across session
+- Print-friendly styles for saving results
+- Performance caching to reduce API calls
+- Better error messages with actionable advice
