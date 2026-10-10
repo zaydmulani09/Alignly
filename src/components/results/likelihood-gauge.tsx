@@ -42,7 +42,7 @@ export function LikelihoodGauge({ score }: LikelihoodGaugeProps) {
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        This is one model's estimate based on the resume and job posting provided. It is not a
+        This is one model&rsquo;s estimate based on the resume and job posting provided. It is not a
         hiring probability.
       </p>
     </div>
